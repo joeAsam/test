@@ -7,10 +7,18 @@ export type Quality = "low" | "medium" | "high";
  * purpose: the render loop reads and writes it every frame without re-rendering React.
  */
 export const world = {
-  /** Stop the scroll position asks for (0 = overview … 6 = finale), fractional mid-flight. */
-  stop: 0,
-  /** The same value after smoothing; the camera follows this one. */
-  stopSmooth: 0,
+  /** The stop the visitor has asked for: 0 = overview, 1 to 5 = the days, 6 = finale. */
+  target: 0,
+  /** Set with a new target to arrive at once instead of flying (deep links, reduced motion). */
+  snap: false,
+  /** The flight in progress: which stops it joins and how far along it is (0 to 1). */
+  flight: { from: 0, to: 0, t: 1 },
+  /** The visitor's own look-around on the overview: turn and tilt about the town centre, radians. */
+  orbit: { yaw: 0, pitch: 0 },
+  /** How much of each leg of the route between venues is drawn, 0 to 1 (leg 0 joins Day 1 to Day 2). */
+  legs: [0, 0, 0, 0],
+  /** The leg being travelled or just completed, or -1 on the wide shots. */
+  legActive: -1,
   /** Seconds since the visitor said yes. Negative while the landing question is up. */
   introT: -1,
   /** True once the intro is over (or was skipped) and scrolling drives the camera. */
@@ -25,11 +33,14 @@ export const world = {
   wide: 1,
   /** Map pins the scene positions every frame; the page registers the elements. */
   pins: [] as (HTMLElement | null)[],
-  /** Pointer position, -1 … 1 on both axes, for a gentle parallax. */
-  pointer: { x: 0, y: 0 },
+  /** The text block of each stop; the scene fades them in step with the flights. */
+  cards: [] as (HTMLElement | null)[],
   reduced: false,
   quality: "high" as Quality,
 };
+
+/** How far the visitor may tilt the overview, radians: a little lower, or up toward a plan view. */
+export const ORBIT_PITCH: [number, number] = [-0.14, 0.62];
 
 /** Length of the intro, in seconds. */
 export const INTRO_SECONDS = 10.5;

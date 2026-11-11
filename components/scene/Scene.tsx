@@ -10,6 +10,7 @@ import { pinnedQuality, startingQuality, world, type Quality } from "@/lib/world
 import { Beacons } from "./Beacons";
 import { EketMap, FOG_COLOR, FOG_DENSITY } from "./Map";
 import { Rig } from "./Rig";
+import { Route } from "./Route";
 import { Sky } from "./Sky";
 import { setBloom } from "./kit";
 import { Cinema } from "./sites/Cinema";
@@ -119,6 +120,7 @@ export default function Scene({ onReady }: { onReady: () => void }) {
       <Sky stars={budget.stars} />
       <Rig shadows={quality !== "low"} mapSize={budget.shadowMap} />
       <EketMap cars={budget.cars} farLights={budget.farLights} onReady={onReady} />
+      <Route />
       <Beacons />
 
       <OnMap index={0}>

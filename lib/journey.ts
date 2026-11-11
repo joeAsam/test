@@ -82,6 +82,9 @@ export function landingPose(fit: number): Pose {
   return { pos: new THREE.Vector3(TOWN[0] + 1500, 3600 + 700 * fit, TOWN[2] + 5600 + 900 * fit), look: new THREE.Vector3(TOWN[0], 0, TOWN[2]) };
 }
 
+/** Whether a stop puts its text beside the picture (the five days) or over it (overview, finale). */
+export const isDay = (stop: number) => stop >= 1 && stop <= SITES.length;
+
 export type Path = { poses: Pose[]; lifts: number[] };
 
 export function buildPath(fit: number): Path {
