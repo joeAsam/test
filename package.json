@@ -1,0 +1,28 @@
+{
+  "name": "youth-choir-week-atlas",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --port 3200",
+    "build": "next build",
+    "start": "next start --port 3200",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@react-three/drei": "^10.7.9",
+    "@react-three/fiber": "9.8.1",
+    "@react-three/postprocessing": "^3.0.4",
+    "next": "16.3.4",
+    "postprocessing": "^6.37.0",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "three": "0.186.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@types/three": "0.186.0",
+    "typescript": "^5.9.0"
+  }
+}

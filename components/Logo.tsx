@@ -1,0 +1,16 @@
+/** Youth Choir Week mark: a flame whose core is a music note. Replace with the official logo when ready. */
+export function Logo({ size, className }: { size?: number; className?: string }) {
+  return (
+    <svg viewBox="0 0 32 32" aria-hidden="true" width={size} height={size} className={className}>
+      <defs>
+        <linearGradient id="ycw-logo" x1="0" y1="1" x2="0" y2="0">
+          <stop offset="0" stopColor="#d9481a" />
+          <stop offset=".6" stopColor="#f26f21" />
+          <stop offset="1" stopColor="#ffd9a8" />
+        </linearGradient>
+      </defs>
+      <path d="M16 1.5C21 8 27 12 27 19.5a11 11 0 0 1-22 0C5 14 9 11 11 6c1.5 3 2.5 4.5 5 5.5Z" fill="url(#ycw-logo)" />
+      <path d="M17.5 11v9.2a3 3 0 1 1-1.6-2.65V12.6l5-1.4v2.4l-3.4 1Z" fill="#04060d" />
+    </svg>
+  );
+}
