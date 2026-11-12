@@ -2,7 +2,8 @@
 
 import type { V3 } from "@/lib/journey";
 import { DAY_COLORS } from "@/lib/journey";
-import { Box, Cyl, Figures, Inst, Lamps, Plinth, Pools, Sign, Strings, Trees, faceTo, geo, seeded, type Figure, type Item, type Pool } from "../kit";
+import { Box, Cyl, Inst, Lamps, Plinth, Pools, Sign, Strings, Trees, faceTo, geo, seeded, type Item, type Pool } from "../kit";
+import { Figures, type Figure } from "../People";
 import { P } from "./palette";
 
 const rand = seeded(31);
@@ -89,7 +90,7 @@ export function Hall() {
       <Inst g={geo.cyl(0.05, 0.05, 1, 8)} items={flagPoles} />
       <Inst g={geo.box(1, 1, 1, 0.02)} items={flags} />
 
-      <Figures items={figures} />
+      <Figures items={figures} seed={11} />
       <Trees items={trees} seed={6} />
       <Lamps items={lamps} />
       <Strings strands={strands} />

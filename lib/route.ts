@@ -146,3 +146,85 @@ export function buildLegs(city: CityData): Leg[] {
   }
   return legs;
 }
+
+/**
+ * A camera track along one or more consecutive legs: points every few metres along the
+ * route, softened so the camera glides past corners instead of snapping round them.
+ */
+export type Track = {
+  /** Smoothed x, z every STEP metres of route. */
+  xs: Float32Array;
+  zs: Float32Array;
+  /** Route length in metres. */
+  total: number;
+  /** Where each leg starts along the track, and how long it is, in metres. */
+  starts: number[];
+  lengths: number[];
+};
+
+const STEP = 15;
+/** Points either side averaged together; 10 × 15 m softens anything tighter than about 300 m. */
+const SOFTEN = 10;
+
+export function buildTrack(legs: Leg[]): Track {
+  const raw: number[] = [];
+  const starts: number[] = [];
+  const lengths: number[] = [];
+  let total = 0;
+  for (const leg of legs) {
+    starts.push(total);
+    let len = 0;
+    for (let i = 2; i < leg.length; i += 2) len += Math.hypot(leg[i] - leg[i - 2], leg[i + 1] - leg[i - 1]);
+    lengths.push(len);
+    total += len;
+    for (let i = 0; i < leg.length; i++) raw.push(leg[i]);
+  }
+  // Resample the joined polyline every STEP metres.
+  const n = Math.max(2, Math.ceil(total / STEP) + 1);
+  const px = new Float32Array(n);
+  const pz = new Float32Array(n);
+  let seg = 0;
+  let segStart = 0;
+  let segLen = Math.hypot(raw[2] - raw[0], raw[3] - raw[1]);
+  for (let k = 0; k < n; k++) {
+    const s = Math.min(total, k * STEP);
+    while (segStart + segLen < s && seg + 2 < raw.length / 2 - 1) {
+      segStart += segLen;
+      seg++;
+      segLen = Math.hypot(raw[2 * seg + 2] - raw[2 * seg], raw[2 * seg + 3] - raw[2 * seg + 1]);
+    }
+    const f = segLen > 0 ? Math.min(1, (s - segStart) / segLen) : 0;
+    px[k] = raw[2 * seg] + (raw[2 * seg + 2] - raw[2 * seg]) * f;
+    pz[k] = raw[2 * seg + 1] + (raw[2 * seg + 3] - raw[2 * seg + 1]) * f;
+  }
+  const xs = new Float32Array(n);
+  const zs = new Float32Array(n);
+  for (let k = 0; k < n; k++) {
+    let sx = 0;
+    let sz = 0;
+    let c = 0;
+    for (let j = Math.max(0, k - SOFTEN); j <= Math.min(n - 1, k + SOFTEN); j++) {
+      sx += px[j];
+      sz += pz[j];
+      c++;
+    }
+    xs[k] = sx / c;
+    zs[k] = sz / c;
+  }
+  // The ends stay exactly on the venues.
+  xs[0] = px[0];
+  zs[0] = pz[0];
+  xs[n - 1] = px[n - 1];
+  zs[n - 1] = pz[n - 1];
+  return { xs, zs, total, starts, lengths };
+}
+
+/** The point `s` metres along a track. */
+export function trackAt(track: Track, s: number, out: { x: number; z: number }) {
+  const f = Math.min(track.xs.length - 1, Math.max(0, s / STEP));
+  const i = Math.min(track.xs.length - 2, Math.floor(f));
+  const t = f - i;
+  out.x = track.xs[i] + (track.xs[i + 1] - track.xs[i]) * t;
+  out.z = track.zs[i] + (track.zs[i + 1] - track.zs[i]) * t;
+  return out;
+}

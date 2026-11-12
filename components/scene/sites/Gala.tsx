@@ -2,7 +2,8 @@
 
 import type { V3 } from "@/lib/journey";
 import { DAY_COLORS } from "@/lib/journey";
-import { Ball, Beam, Box, Cyl, Figures, Inst, Lamps, Plinth, Pools, Sign, Strings, Trees, faceTo, geo, seeded, type Figure, type Item, type Pool } from "../kit";
+import { Ball, Beam, Box, Cyl, Inst, Lamps, Plinth, Pools, Sign, Strings, Trees, faceTo, geo, seeded, type Item, type Pool } from "../kit";
+import { Figures, type Figure } from "../People";
 import { P } from "./palette";
 
 const SITE = 4;
@@ -19,13 +20,18 @@ const cloths: Item[] = TABLES.map((t) => ({ p: [t[0], 0.4, t[2]], c: "#f4f1ea" }
 const candles: Item[] = TABLES.map((t) => ({ p: [t[0], 0.98, t[2]], c: "#ffe2b8" }));
 const chairs: Item[] = [];
 const figures: Figure[] = [];
+const seated: Figure[] = [];
 TABLES.forEach((t, ti) => {
   for (let k = 0; k < 6; k++) {
     const a = (k / 6) * Math.PI * 2 + ti;
     const p: V3 = [t[0] + Math.cos(a) * 1.6, 0, t[2] + Math.sin(a) * 1.6];
-    chairs.push({ p: [p[0], 0.42, p[2]], s: [0.42, 0.84, 0.42], r: [0, -a, 0], c: P.linen });
+    // A seat at sitting height and a back on the side away from the table.
+    chairs.push({ p: [p[0], 0.22, p[2]], s: [0.44, 0.44, 0.44], r: [0, -a, 0], c: P.linen });
+    chairs.push({ p: [t[0] + Math.cos(a) * 1.85, 0.62, t[2] + Math.sin(a) * 1.85], s: [0.44, 0.8, 0.06], r: [0, Math.PI / 2 - a, 0], c: P.linen });
     // A few guests have arrived early and stand by their tables.
-    if (rand() > 0.82) figures.push({ p: [t[0] + Math.cos(a) * 2.3, 0, t[2] + Math.sin(a) * 2.3], face: faceTo(p, t), h: 0.94 + rand() * 0.1 });
+    // Most chairs are taken; a few guests stand and talk behind them.
+    if (rand() > 0.25) seated.push({ p: [p[0], 0, p[2]], face: faceTo(p, t), sit: true, h: 0.95 + rand() * 0.06 });
+    else if (rand() > 0.5) figures.push({ p: [t[0] + Math.cos(a) * 2.3, 0, t[2] + Math.sin(a) * 2.3], face: faceTo(p, t), h: 0.94 + rand() * 0.1 });
   }
 });
 figures.push(
@@ -120,7 +126,8 @@ export function Gala() {
       <Inst g={geo.cyl(0.06, 0.08, 1, 8)} items={topiaryStems} />
       <Inst g={geo.ball(1, 18)} items={topiary} />
 
-      <Figures items={figures} />
+      <Figures items={figures} wardrobe="formal" seed={51} />
+      <Figures items={seated} wardrobe="formal" seed={52} />
       <Trees items={trees} seed={19} />
       <Lamps items={lamps} />
       <Strings strands={strands} sag={0.9} gap={0.95} />

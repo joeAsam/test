@@ -471,27 +471,5 @@ export function Beam({ p, to, spread = 2.4, c = "#ffe2b0", power = 0.3, island, 
   return <mesh ref={ref} geometry={beamGeometry()} material={mat} position={p} scale={[spread, length, spread]} />;
 }
 
-/* ------------------------------------------------------------------ */
-/* Scale figures                                                       */
-/* ------------------------------------------------------------------ */
-
-export type Figure = { p: V3; /** Which way they face, radians. 0 faces the street (+Z). */ face?: number; h?: number };
-
-const figureBody = () =>
-  cached("figure-body", () => new THREE.LatheGeometry([[0, 0], [0.2, 0], [0.22, 0.05], [0.19, 0.72], [0.24, 1.06], [0.2, 1.38], [0.07, 1.5], [0, 1.5]].map(([x, y]) => new THREE.Vector2(x, y)), 14));
-const figureHead = () => cached("figure-head", () => new THREE.SphereGeometry(0.135, 14, 10).translate(0, 1.65, 0));
-
-/** Plain, pale scale figures, as on an architect's model: they show size and where people gather. */
-export function Figures({ items, color = "#e9e5dc" }: { items: Figure[]; color?: string }) {
-  const list = useMemo<Item[]>(() => items.map((f) => ({ p: f.p, r: [0, f.face ?? 0, 0] as V3, s: f.h ?? 1 })), [items]);
-  const mat = toyMat(color);
-  return (
-    <>
-      <Inst g={figureBody()} items={list} m={mat} />
-      <Inst g={figureHead()} items={list} m={mat} />
-    </>
-  );
-}
-
 /** Face from one ground point toward another. */
 export const faceTo = (from: V3, to: V3) => Math.atan2(to[0] - from[0], to[2] - from[2]);

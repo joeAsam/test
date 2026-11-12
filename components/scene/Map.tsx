@@ -635,6 +635,7 @@ export function EketMap({ cars, farLights, onReady }: { cars: number; farLights:
   }, []);
   useFrame(({ clock }) => {
     U.uReach.value = world.reach;
+    U.uFogDensity.value = world.fogDensity;
     U.uTime.value = world.reduced ? 0 : clock.elapsedTime;
     U.uPx.value = dpr;
     // Ready only once the buildings exist, so the intro never competes with that work.

@@ -1088,7 +1088,7 @@ body {
 }
 
 /* The overview can be turned by dragging. */
-.xp[data-phase="journey"][data-home="true"] {
+.xp[data-phase="journey"][data-turnable="true"] {
   cursor: grab;
 }
 
@@ -1206,10 +1206,6 @@ body {
   transform: scaleX(1);
 }
 
-.nav__short {
-  display: none;
-}
-
 .rail {
   display: none;
 }
@@ -1301,7 +1297,9 @@ body {
   .nav__link {
     flex: 1;
     min-height: 40px;
-    padding: 0 4px;
+    padding: 0 2px;
+    font-size: 12.5px;
+    letter-spacing: -0.01em;
   }
 
   .nav__link::after {
@@ -1309,15 +1307,6 @@ body {
     left: 30%;
   }
 
-  .nav__long {
-    display: none;
-  }
-
-  .nav__short {
-    display: inline;
-    font-family: var(--mono);
-    font-size: 13px;
-  }
 
   .hero__hint {
     left: 18px;

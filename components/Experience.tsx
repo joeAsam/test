@@ -5,7 +5,7 @@ import { memo, useCallback, useEffect, useRef, useState, type CSSProperties } fr
 import { dayLabel, dayLong, event, time12, weekRange, weekState } from "@/lib/content";
 import { DAY_COLORS, LAST_STOP } from "@/lib/journey";
 import { VENUES } from "@/lib/venues";
-import { INTRO_SECONDS, ORBIT_PITCH, world } from "@/lib/world";
+import { INTRO_SECONDS, world } from "@/lib/world";
 import { Logo } from "./Logo";
 
 // Memoised: the scene only depends on a stable callback, so page state changes never touch it.
@@ -15,9 +15,9 @@ type Phase = "landing" | "intro" | "journey";
 
 /** Every stop of the journey, in order. `nav` is its name in the navbar. */
 const STOPS = [
-  { id: "home", nav: "Home", short: "Home", title: event.city },
-  ...event.days.map((d) => ({ id: `day${d.day}`, nav: `Day ${d.day}`, short: String(d.day), title: d.title })),
-  { id: "rsvp", nav: "RSVP", short: "RSVP", title: "RSVP" },
+  { id: "home", nav: "Home", title: event.city },
+  ...event.days.map((d) => ({ id: `day${d.day}`, nav: `Day ${d.day}`, title: d.title })),
+  { id: "rsvp", nav: "RSVP", title: "RSVP" },
 ];
 
 /** The RSVP link in lib/content.ts is a placeholder until it points at a real form. */
@@ -32,8 +32,10 @@ const VERBS_AT = 6.1;
 const VERB_GAP = 0.55;
 const TITLE_AT = 8.9;
 
-/** After one scroll or swipe moves a stop, further input is ignored for this long (ms). */
-const STEP_LOCK = 950;
+/** A new scroll gesture only counts after the wheel has been still this long (ms), so a trackpad's long tail never moves two stops. */
+const WHEEL_QUIET = 220;
+/** Scrolling is ignored until the flight in progress is this far along (0 to 1). */
+const READY_AT = 0.86;
 
 const day2 = (n: number) => String(n).padStart(2, "0");
 
@@ -145,20 +147,29 @@ export function Experience() {
     }
   }, [goTo]);
 
-  // One scroll, swipe or key press moves exactly one stop. On the overview, dragging turns the map.
+  // One scroll, swipe or key press moves exactly one stop. At any stop but the finale, dragging turns the camera.
   useEffect(() => {
     if (phase !== "journey") return;
-    let lockedUntil = 0;
     let wheel = 0;
     let wheelAt = 0;
+    let fresh = true;
+    const touched = () => {
+      world.lastInput = performance.now();
+    };
+    touched();
     const step = (dir: number) => {
-      const now = performance.now();
-      if (now < lockedUntil) return;
-      lockedUntil = now + STEP_LOCK;
+      // Wait for the current flight to land before starting the next one.
+      if (world.flight.t < READY_AT) return;
       goTo(at.current + dir);
     };
 
     const onWheel = (e: WheelEvent) => {
+      touched();
+      if (e.ctrlKey) {
+        e.preventDefault();
+        if (at.current !== LAST_STOP && world.flight.t >= 1) world.orbit.zoom *= Math.exp(e.deltaY * 0.004);
+        return;
+      }
       // An open card that still has text to scroll keeps the wheel for itself.
       const card = e.target instanceof Element ? e.target.closest<HTMLElement>(".card") : null;
       if (card && card.scrollHeight > card.clientHeight + 1) {
@@ -167,18 +178,31 @@ export function Experience() {
       }
       e.preventDefault();
       const now = performance.now();
-      // A trackpad sends a long tail of small deltas: gather them, and forget stale ones.
-      if (now - wheelAt > 260) wheel = 0;
+      // Each new gesture starts after a short pause; one gesture moves one stop, however long its tail.
+      if (now - wheelAt > WHEEL_QUIET) {
+        wheel = 0;
+        fresh = true;
+      }
       wheelAt = now;
+      if (!fresh) return;
       wheel += e.deltaY;
-      if (Math.abs(wheel) > 36) {
-        step(Math.sign(wheel));
+      if (Math.abs(wheel) > 30) {
+        if (world.flight.t >= READY_AT) {
+          step(Math.sign(wheel));
+          fresh = false;
+        }
         wheel = 0;
       }
     };
 
     const onKey = (e: KeyboardEvent) => {
+      touched();
       if (e.altKey || e.ctrlKey || e.metaKey) return;
+      if ((e.key === "+" || e.key === "=" || e.key === "-") && at.current !== LAST_STOP && world.flight.t >= 1) {
+        world.orbit.zoom *= e.key === "-" ? 1.15 : 1 / 1.15;
+        e.preventDefault();
+        return;
+      }
       const typing = e.target instanceof HTMLElement && e.target.closest("input, textarea, select");
       if (typing) return;
       const onButton = e.target instanceof HTMLElement && e.target.closest("a, button");
@@ -190,28 +214,88 @@ export function Experience() {
       e.preventDefault();
     };
 
-    // Pointer: a drag on the overview turns the map; a vertical swipe anywhere moves a stop.
-    let drag: { id: number; x: number; y: number; yaw: number; pitch: number; touch: boolean; turned: boolean } | null = null;
+    // Pointer: a drag turns the camera (with a short glide after letting go); a vertical swipe on touch moves a stop.
+    const canTurn = () => at.current !== LAST_STOP && world.flight.t >= 1;
+    let drag: { id: number; x: number; y: number; lx: number; ly: number; lt: number; vx: number; vy: number; touch: boolean; turned: boolean } | null = null;
+    let glide = 0;
+    const fingers = new Map<number, { x: number; y: number }>();
+    let pinch = 0;
+    const spread = () => {
+      const [a, b] = [...fingers.values()];
+      return Math.hypot(a.x - b.x, a.y - b.y);
+    };
+    const stopGlide = () => {
+      cancelAnimationFrame(glide);
+      glide = 0;
+    };
     const onDown = (e: PointerEvent) => {
+      touched();
+      if (e.pointerType === "touch") {
+        fingers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        if (fingers.size === 2) {
+          pinch = spread();
+          drag = null;
+          return;
+        }
+      }
       if (onControl(e.target) || (e.pointerType === "mouse" && e.button !== 0)) return;
-      drag = { id: e.pointerId, x: e.clientX, y: e.clientY, yaw: world.orbit.yaw, pitch: world.orbit.pitch, touch: e.pointerType !== "mouse", turned: false };
-      if (at.current === 0 && !drag.touch) setGrabbing(true);
+      stopGlide();
+      const now = performance.now();
+      drag = { id: e.pointerId, x: e.clientX, y: e.clientY, lx: e.clientX, ly: e.clientY, lt: now, vx: 0, vy: 0, touch: e.pointerType !== "mouse", turned: false };
+      if (canTurn() && !drag.touch) setGrabbing(true);
     };
     const onMove = (e: PointerEvent) => {
-      if (!drag || e.pointerId !== drag.id || at.current !== 0) return;
+      if (fingers.has(e.pointerId)) fingers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (fingers.size === 2 && pinch > 0) {
+        touched();
+        const now = spread();
+        if (canTurn()) world.orbit.zoom *= pinch / Math.max(1, now);
+        pinch = now;
+        return;
+      }
+      if (!drag || e.pointerId !== drag.id) return;
+      touched();
+      if (!canTurn()) return;
       const dx = e.clientX - drag.x;
       const dy = e.clientY - drag.y;
-      // On touch, only a mostly sideways drag turns the map, so swiping up and down still moves on.
+      // On touch, only a mostly sideways drag turns the view, so swiping up and down still moves on.
       if (drag.touch && !drag.turned && Math.abs(dx) < Math.abs(dy) * 1.2) return;
-      if (Math.abs(dx) + Math.abs(dy) > 6) drag.turned = true;
-      world.orbit.yaw = drag.yaw - dx * 0.0045;
-      if (!drag.touch) world.orbit.pitch = Math.min(ORBIT_PITCH[1], Math.max(ORBIT_PITCH[0], drag.pitch + dy * 0.003));
+      if (Math.abs(dx) + Math.abs(dy) > 5) drag.turned = true;
+      const mx = e.clientX - drag.lx;
+      const my = e.clientY - drag.ly;
+      const now = performance.now();
+      const ms = Math.max(8, now - drag.lt);
+      drag.vx = (mx / ms) * 16;
+      drag.vy = (my / ms) * 16;
+      drag.lx = e.clientX;
+      drag.ly = e.clientY;
+      drag.lt = now;
+      // Grab the scene and pull it: it follows the pointer sideways; drag down to look from higher up.
+      world.orbit.yaw -= mx * 0.005;
+      if (!drag.touch) world.orbit.pitch += my * 0.0035;
     };
     const onUp = (e: PointerEvent) => {
+      fingers.delete(e.pointerId);
+      if (fingers.size < 2) pinch = 0;
       if (!drag || e.pointerId !== drag.id) return;
+      touched();
       const dy = e.clientY - drag.y;
       const dx = e.clientX - drag.x;
       if (drag.touch && !drag.turned && Math.abs(dy) > 46 && Math.abs(dy) > Math.abs(dx) * 1.2) step(dy < 0 ? 1 : -1);
+      // Let the turn glide to a stop instead of halting dead.
+      if (drag.turned && canTurn() && performance.now() - drag.lt < 80) {
+        let vx = drag.vx;
+        let vy = drag.touch ? 0 : drag.vy;
+        const tick = () => {
+          vx *= 0.9;
+          vy *= 0.9;
+          world.orbit.yaw -= vx * 0.005;
+          world.orbit.pitch += vy * 0.0035;
+          touched();
+          glide = Math.abs(vx) + Math.abs(vy) > 0.05 && canTurn() ? requestAnimationFrame(tick) : 0;
+        };
+        glide = requestAnimationFrame(tick);
+      }
       drag = null;
       setGrabbing(false);
     };
@@ -223,6 +307,7 @@ export function Experience() {
     window.addEventListener("pointerup", onUp);
     window.addEventListener("pointercancel", onUp);
     return () => {
+      stopGlide();
       window.removeEventListener("wheel", onWheel);
       window.removeEventListener("keydown", onKey);
       window.removeEventListener("pointerdown", onDown);
@@ -246,7 +331,7 @@ export function Experience() {
   const accent = active >= 1 && active <= 5 ? DAY_COLORS[active - 1] : "#ffffff";
 
   return (
-    <div className="xp" data-phase={phase} data-hero={heroIn} data-ready={ready} data-home={active === 0} data-grabbing={grabbing}>
+    <div className="xp" data-phase={phase} data-hero={heroIn} data-ready={ready} data-home={active === 0} data-turnable={active !== LAST_STOP} data-grabbing={grabbing}>
       <div className="xp__canvas" aria-hidden="true">
         <Scene onReady={onReady} />
       </div>
@@ -299,10 +384,7 @@ export function Experience() {
               title={s.title}
               onClick={() => goTo(i)}
             >
-              <span className="nav__long">{s.nav}</span>
-              <span className="nav__short" aria-hidden="true">
-                {s.short}
-              </span>
+              {s.nav}
             </button>
           ))}
         </nav>
@@ -448,7 +530,7 @@ export function Experience() {
 
       {/* How to move, shown only on the overview. */}
       <p className="hero__hint label" aria-hidden={active !== 0}>
-        <span className="hero__hint-drag">Drag to look around</span>
+        <span className="hero__hint-drag">Drag to look around · Ctrl + scroll or pinch to zoom</span>
         <button type="button" tabIndex={active === 0 ? 0 : -1} onClick={() => goTo(1)}>
           Scroll for Day 1 <span aria-hidden="true">↓</span>
         </button>

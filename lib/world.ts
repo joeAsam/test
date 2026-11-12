@@ -13,12 +13,18 @@ export const world = {
   snap: false,
   /** The flight in progress: which stops it joins and how far along it is (0 to 1). */
   flight: { from: 0, to: 0, t: 1 },
-  /** The visitor's own look-around on the overview: turn and tilt about the town centre, radians. */
-  orbit: { yaw: 0, pitch: 0 },
+  /** The visitor's own look-around at a stop: turn and tilt about what the camera faces, radians. */
+  orbit: { yaw: 0, pitch: 0, zoom: 1 },
+  /** When the visitor last scrolled, dragged, swiped or pressed a key (performance.now()). */
+  lastInput: 0,
+  /** Fog thickness right now. Thinned when the camera climbs, so a long route stays visible. */
+  fogDensity: 0.000085,
   /** How much of each leg of the route between venues is drawn, 0 to 1 (leg 0 joins Day 1 to Day 2). */
   legs: [0, 0, 0, 0],
   /** The leg being travelled or just completed, or -1 on the wide shots. */
   legActive: -1,
+  /** The road route of each leg, once worked out from the map; the camera follows it between days. */
+  routes: null as number[][] | null,
   /** Seconds since the visitor said yes. Negative while the landing question is up. */
   introT: -1,
   /** True once the intro is over (or was skipped) and scrolling drives the camera. */
@@ -38,9 +44,6 @@ export const world = {
   reduced: false,
   quality: "high" as Quality,
 };
-
-/** How far the visitor may tilt the overview, radians: a little lower, or up toward a plan view. */
-export const ORBIT_PITCH: [number, number] = [-0.14, 0.62];
 
 /** Length of the intro, in seconds. */
 export const INTRO_SECONDS = 10.5;

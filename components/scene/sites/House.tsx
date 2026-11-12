@@ -2,7 +2,8 @@
 
 import type { V3 } from "@/lib/journey";
 import { DAY_COLORS } from "@/lib/journey";
-import { Ball, Box, Cone, Cyl, Figures, Inst, Lamps, Palms, Plinth, Pools, Roof, Strings, faceTo, geo, seeded, type Figure, type Item, type Pool } from "../kit";
+import { Ball, Box, Cone, Cyl, Inst, Lamps, Palms, Plinth, Pools, Roof, Strings, faceTo, geo, seeded, type Item, type Pool } from "../kit";
+import { Figures, type Figure } from "../People";
 import { P } from "./palette";
 
 const rand = seeded(73);
@@ -96,7 +97,7 @@ export function House() {
       <Ball p={[-9.75, 1, 8.5]} s={0.16} c="#fff0d0" glow={3.2} />
       <Ball p={[-8.25, 1, 8.5]} s={0.16} c="#fff0d0" glow={3.2} />
 
-      <Figures items={figures} />
+      <Figures items={figures} seed={31} />
       <Palms items={palms} seed={15} />
       <Lamps items={lamps} />
       <Strings strands={strands} />

@@ -6,7 +6,8 @@ import * as THREE from "three";
 import type { V3 } from "@/lib/journey";
 import { DAY_COLORS } from "@/lib/journey";
 import { world } from "@/lib/world";
-import { Ball, Beam, Box, Figures, Inst, Lamps, Palms, Plinth, Pools, Sign, Strings, geo, seeded, type Figure, type Item, type Pool } from "../kit";
+import { Ball, Beam, Box, Inst, Lamps, Palms, Plinth, Pools, Sign, Strings, geo, seeded, type Item, type Pool } from "../kit";
+import { Figures, type Figure } from "../People";
 import { P } from "./palette";
 
 const SITE = 1;
@@ -15,11 +16,14 @@ const rand = seeded(57);
 /** Three staggered rows of low loungers facing the screen. */
 const loungers: Item[] = [];
 const cushions: Item[] = [];
+const viewers: Figure[] = [];
 [-0.4, 2, 4.4].forEach((z, row) => {
   for (let i = 0; i < 6; i++) {
     const x = -1.6 + i * 2 + (row % 2) * 0.9;
     loungers.push({ p: [x, 0.22, z], s: [0.9, 0.24, 1.7], c: P.timber });
     cushions.push({ p: [x, 0.4, z + 0.1], s: [0.8, 0.14, 1.4], c: P.linen });
+    // Most loungers are taken; viewers sit facing the screen (toward -Z).
+    if ((i + row * 2) % 5 !== 3) viewers.push({ p: [x, 0, z + 0.25], face: Math.PI, sit: true, h: 0.96 });
   }
 });
 
@@ -134,7 +138,8 @@ export function Cinema() {
 
       <Inst g={geo.box(1, 1, 1, 0.04)} items={loungers} />
       <Inst g={geo.box(1, 1, 1, 0.06)} items={cushions} />
-      <Figures items={figures} />
+      <Figures items={figures} seed={21} />
+      <Figures items={viewers} seed={22} />
       <Palms items={palms} seed={12} />
       <Lamps items={lamps} />
       <Strings strands={strands} />

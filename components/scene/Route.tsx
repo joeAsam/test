@@ -78,7 +78,8 @@ function LegLine({ leg, index }: { leg: Leg; index: number }) {
             vec4 w = modelMatrix * vec4(position, 1.0);
             vDist = length(cameraPosition - w.xyz);
             // A lane wide up close; a clear line a few pixels wide from the air.
-            w.xz += aN * aSide * max(2.6, vDist * 0.0026);
+            // Always a little wider than the main road it runs along, so it sits clearly on top of it.
+            w.xz += aN * aSide * max(11.0, vDist * 0.0036);
             gl_Position = projectionMatrix * viewMatrix * w;
           }`,
         fragmentShader: /* glsl */ `
@@ -98,7 +99,7 @@ function LegLine({ leg, index }: { leg: Leg; index: number }) {
             float glow = 0.62 + 0.3 * pulse + 0.9 * head;
             float a = clamp(band * uPower, 0.0, 1.0);
             a *= exp(-uFogDensity * uFogDensity * vDist * vDist);
-            gl_FragColor = vec4(mix(uColor, vec3(1.0), 0.15 * head) * glow * 1.5, a * 0.92);
+            gl_FragColor = vec4(mix(uColor, vec3(1.0), 0.15 * head) * glow * 1.9, a * 0.95);
             #include <tonemapping_fragment>
             #include <colorspace_fragment>
           }`,
@@ -109,6 +110,7 @@ function LegLine({ leg, index }: { leg: Leg; index: number }) {
   useFrame(({ clock }, dt) => {
     const u = material.uniforms;
     u.uDrawn.value = world.legs[index];
+    u.uFogDensity.value = world.fogDensity;
     u.uTime.value = world.reduced ? 0 : clock.elapsedTime;
     // On a day, the leg just travelled stands out and earlier ones step back.
     const wanted = world.legActive < 0 ? 0.9 : index === world.legActive ? 1 : 0.45;
@@ -122,7 +124,12 @@ export function Route() {
   const [legs, setLegs] = useState<Leg[] | null>(null);
   useEffect(() => {
     let alive = true;
-    loadCity().then((city) => alive && setLegs(buildLegs(city)));
+    loadCity().then((city) => {
+      if (!alive) return;
+      const built = buildLegs(city);
+      world.routes = built;
+      setLegs(built);
+    });
     return () => {
       alive = false;
     };

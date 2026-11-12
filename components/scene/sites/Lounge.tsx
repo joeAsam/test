@@ -6,7 +6,8 @@ import type * as THREE from "three";
 import type { V3 } from "@/lib/journey";
 import { DAY_COLORS } from "@/lib/journey";
 import { world } from "@/lib/world";
-import { Ball, Beam, Box, Cyl, Figures, Inst, Plinth, Pools, Sign, Strings, Trees, faceTo, geo, seeded, type Figure, type Item, type Pool } from "../kit";
+import { Ball, Beam, Box, Cyl, Inst, Plinth, Pools, Sign, Strings, Trees, faceTo, geo, seeded, type Item, type Pool } from "../kit";
+import { Figures, type Figure } from "../People";
 import { P } from "./palette";
 
 const SITE = 3;
@@ -141,7 +142,7 @@ export function Lounge() {
       <Inst g={geo.cyl(0.45, 0.45, 0.5, 20)} items={sideTables} />
       <Inst g={geo.ball(0.09, 10)} items={candles} glow={3} />
 
-      <Figures items={figures} />
+      <Figures items={figures} wardrobe="party" seed={41} />
       <Trees items={trees} seed={17} />
       <Strings strands={strands} />
       <Pools items={pools} />
